@@ -1,4 +1,4 @@
-# Stable Diffusion web UI
+# Stable Diffusion web UI FOR RTX 5090 GPU
 A web interface for Stable Diffusion, implemented using Gradio library.
 
 ![](screenshot.png)
@@ -203,3 +203,4 @@ Licenses for borrowed code can be found in `Settings -> Licenses` screen, and al
 - Hypertile - tfernd - https://github.com/tfernd/HyperTile
 - Initial Gradio script - posted on 4chan by an Anonymous user. Thank you Anonymous user.
 - (You)
+
