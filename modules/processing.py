@@ -28,7 +28,10 @@ import modules.images as images
 import modules.styles
 import modules.sd_models as sd_models
 import modules.sd_vae as sd_vae
-from ldm.data.util import AddMiDaS
+try:
+    from ldm.data.util import AddMiDaS
+except ImportError:
+    AddMiDaS = None
 from ldm.models.diffusion.ddpm import LatentDepth2ImageDiffusion
 
 from einops import repeat, rearrange
@@ -302,9 +305,20 @@ class StableDiffusionProcessing:
         return txt2img_image_conditioning(self.sd_model, x, width or self.width, height or self.height)
 
     def depth2img_image_conditioning(self, source_image):
+        if AddMiDaS is None:
+            raise RuntimeError(
+                "Depth2img is disabled because MiDaS preprocessing is unavailable "
+                "(missing ldm.data.util.AddMiDaS). Install compatible MiDaS dependencies to use depth models."
+            )
+
         # Use the AddMiDaS helper to Format our source image to suit the MiDaS model
         transformer = AddMiDaS(model_type="dpt_hybrid")
         transformed = transformer({"jpg": rearrange(source_image[0], "c h w -> h w c")})
+        if "midas_in" not in transformed:
+            raise RuntimeError(
+                "Depth2img preprocessing failed: AddMiDaS output is missing 'midas_in'. "
+                "MiDaS may be unavailable or incompatible."
+            )
         midas_in = torch.from_numpy(transformed["midas_in"][None, ...]).to(device=shared.device)
         midas_in = repeat(midas_in, "1 ... -> n ...", n=self.batch_size)
 
@@ -378,6 +392,11 @@ class StableDiffusionProcessing:
         # HACK: Using introspection as the Depth2Image model doesn't appear to uniquely
         # identify itself with a field common to all models. The conditioning_key is also hybrid.
         if isinstance(self.sd_model, LatentDepth2ImageDiffusion):
+            if AddMiDaS is None:
+                raise RuntimeError(
+                    "Depth2img model cannot run because MiDaS preprocessing is unavailable "
+                    "(missing ldm.data.util.AddMiDaS)."
+                )
             return self.depth2img_image_conditioning(source_image)
 
         if self.sd_model.cond_stage_key == "edit":
